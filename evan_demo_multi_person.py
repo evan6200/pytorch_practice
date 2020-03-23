@@ -25,6 +25,23 @@ from torch.autograd import Variable
 from sklearn import datasets
 import torch.utils.data as Data
 import matplotlib.pyplot as plt
+
+from threading import Thread 
+import time
+
+def fire(data):
+  print('in thread print', data )  
+
+
+def timer(name,delay,times,d):
+    print("計時器: "+ name + "開始" )
+    while times > 0:
+        time.sleep(delay)
+        print(name + ": " + str(time.ctime(time.time())))
+        times -= 1
+        print(np.array(d).shape)
+    print("計時器: " + name + "完成")
+
 #use cuda 
 assert torch.cuda.is_available()
 device = torch.device("cuda")
@@ -239,7 +256,8 @@ try:
     # Check if camera opened successfully
     if (cap.isOpened()== False): 
       print("Error opening video stream or file")
-    
+    t1 = Thread(target=timer,args=("程式1",1,5,all_P_F))
+    t1.start() 
     while(cap.isOpened()):
       # Capture frame-by-frame
       ret, frame = cap.read()
@@ -249,60 +267,49 @@ try:
         opWrapper.emplaceAndPop([datum])
         # Display the resulting frame
         #cv2.imshow('Frame',datum.cvOutputData)
-        print('Evan input feature')
+        #print('Evan input feature')
         
-        people_count=len(datum.poseKeypoints)
-        last_fame_people=people_count
+        #people_count=len(datum.poseKeypoints)
+        #last_fame_people=people_count
        
         all_P_F.append(datum.poseKeypoints)
           
-        if ( 3 == len(all_P_F)):
-          P1=[]
+        if ( 5 == len(all_P_F)):
+          #try:
+          #  _thread.start_new_thread( fire, (1))
+          #except:
+          #  print("ERROR")
           fps=0
-          all_dist=[]
-          print ('len(all_P_F)',len(all_P_F))
           x0=all_P_F[0]#t-1
-         # for sub1T in x0:
-            
           all_P_F.pop(0)
           x1=np.expand_dims(x0,axis=0) #(1,6,25,3) the first frame
           frame_t=[]
           for frame in all_P_F:
-            print('in frame',fps)
             fps=fps+1
             d=[]
             p1=[]
             for p in x0:
-              #p0=np.expand_dims(p,axis=0) #(1,25,3)
               all_dist=[]
-              print('T-1 x0 each person start', p[1][0])
               start=np.array(p[1][0],p[1][1])
               for pT in frame: #T frame
                 end=np.array(pT[1][0],pT[1][0])
-                #d.append(get_dist(start,end))
                 d=get_dist(start,end)
-                print('d=',d)
                 all_dist.append(d)
-             
               np_all_dist=np.array(all_dist)
               idx=np.argmin(np_all_dist) #nearest people
-              #p1=np.expand_dims(frame[idx],axis=0) #(1,25,3)
-              #np.vstack(p0,p1) 
-              print('nearest in frame fps,is person',idx)
-              #p1=np.expand_dims(frame[idx],axis=0)
-              print('frame[idx]',frame[idx][1][0])
               if ( len(p1)==0 ): #(1,25,3)  first person
                 p1=np.expand_dims(frame[idx],axis=0) 
               else:
                 p1=np.vstack((p1,np.expand_dims(frame[idx],axis=0))) #(person++,feature,XY_C) (2,25,3)
-              print('p1.shape',p1.shape)
             frame_t=np.expand_dims(p1,axis=0) #(1,6,25,3)
             np.vstack((x1,frame_t)).shape
             x1=np.vstack((x1,frame_t))  #(2,6,25,3) (frame++,person,feature,)
             #[Every Frame END]  
-            #break 
-            print('get neck',np_all_dist)    
-          break 
+            break 
+            #print('x1.shape=>',x1.shape)    
+          
+          all_P_F=[]
+          #break 
         #      start=(x[1][0],x[1][1])
         #      end=(a[1][0],a[1][1])
         #      d=get_dist(start,end)            
@@ -310,8 +317,8 @@ try:
             
         #x0=in_feature(datum.poseKeypoints) #return to draw in the frame
         #x.append(x0)
-        print('X=LEN=',len(x))
-        if(0 and len(x) == 10):
+        #print('X=LEN=',len(x))
+        if(0):# and len(x) == 10):
           for i in range(len(x[0])):
             P=[]
             for frame in x:
@@ -352,7 +359,7 @@ try:
 #        cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
 #        cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)
         #0322 mofieid for frmae randering END
-      #cv2.imshow('Frame',frame) 
+      cv2.imshow('Frame',frame) 
       # Press Q on keyboard to  exit
       k = cv2.waitKey(33)#ESC
       if k==27:    # Esc key to stop
