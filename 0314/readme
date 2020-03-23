@@ -1,0 +1,61 @@
+#0314 change list
+
+#remove foot 
+
+0314_test_paper_modieifed_1D.py 
+#real 1D CNN with new method and softmax
+#without foot, keep knee
+
+0314_test_paper.py
+#fake 1D CNN with new method  
+#without foot, keep knee
+
+3mP1 test acc 100%
+6mP3 test acc 80~60 not stable ave maybe 70%
+
+
+def get_feature (Point1,Point2): # return separated point of vector
+    X1=Point1[0]
+    Y1=Point1[1]
+    X2=Point2[0]
+    Y2=Point2[1]
+
+    #create the points 
+    number_of_points=number_of_no_foot_feature
+    xs=np.linspace(X1,X2,number_of_points+2)
+    ys=np.linspace(Y1,Y2,number_of_points+2)
+
+    #print them
+    #for i in range(len(xs)):
+    #    print (xs[i],ys[i])
+
+    #reshape
+    X= np.array([[xs],[ys]])
+    X=X.transpose()
+    X=np.squeeze(X) #example 12,1,2 -> # 12,2
+    return X
+
+ #Evan 0314 start 
+            LR_shoulder=get_dist(rshoulder,lshoulder)
+            top=get_feature(rshoulder,lshoulder)    # return separated point of vector
+            bottom=get_feature(rhip,lhip)
+            left=get_feature(lshoulder,lhip)
+            right=get_feature(rshoulder,rhip)
+            lagR=get_feature(rhip,rknee)
+            lagL=get_feature(lhip,lknee)
+
+            all_feature=np.concatenate((top,bottom),axis=0)
+            all_feature=np.concatenate((all_feature,left),axis=0)
+            all_feature=np.concatenate((all_feature,right),axis=0)
+            all_feature=np.concatenate((all_feature,lagR),axis=0)  #R lag hip to knee
+            all_feature=np.concatenate((all_feature,lagL),axis=0)  #L lag hip to knee
+
+
+            i=0
+            f_people=[]
+            for data in all_feature:
+                x=get_dist(gravityXY,data)/get_dist(neck,mhip)
+                #print('X',x)
+                i=i+1
+                f_people.append(x)
+
