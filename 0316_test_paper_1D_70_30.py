@@ -34,10 +34,15 @@ k_3mP1="/home/evan/mp4_to_png/3m/save_video_p1/keypoint_3MP1/"
 k_MIX_3P1_6P1P2="/home/evan/mp4_to_png/mix_3M_6M/3P1_6P1_P2/keypoint_mix/"
 k_MIX_3P1_6M_P1P2P3="/home/evan/mp4_to_png/mix_3M_6M/3P1_6P1_P2_P3/keypoint_mix/"
 k_MIX_3P1_6M_P1P2_9P1="/home/evan/mp4_to_png/mix_3M_6M9M/3P1_6P1_P2_9P1/keypoint_mix/"
+
+#0406
+k_MIX_0406_1_9M="/home/evan/mp4_to_png/CONVERT_VIDEO_PIC/train_sample_0406/keypoint_0406_1M_9M/"
 #0303
 #training sample
 #training_keypoint="/home/evan/mp4_to_png/mix_3M_6M9M/3P1_6P1_P2_9P1_P2/keypoint_mix/"
-training_keypoint=k_MIX_3P1_6M_P1P2_9P1
+#training_keypoint=k_MIX_3P1_6M_P1P2_9P1
+#0406 1M -> 9M
+training_keypoint=k_MIX_0406_1_9M
 
 
 #test sample
@@ -365,12 +370,12 @@ X = X[validate_count:]
 y = y[validate_count:]
 
 torch_dataset=Data.TensorDataset(X,y)
-#torch_dataset_test=Data.TensorDataset(X_TEST,y_test)
-torch_dataset_validate=Data.TensorDataset(X_val,y_val)
+torch_dataset_test=Data.TensorDataset(X_TEST,y_test)
+#torch_dataset_validate=Data.TensorDataset(X_val,y_val)
 
 loader = Data.DataLoader(dataset=torch_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
-loader_test = Data.DataLoader(dataset=torch_dataset_validate,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
-
+#loader_test = Data.DataLoader(dataset=torch_dataset_validate,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
+loader_test = Data.DataLoader(dataset=torch_dataset_test,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
 
 plt.ion()
 plt.show()
@@ -383,6 +388,7 @@ for epoch in range(800):
     correct_cnt, ave_loss = 0, 0
     ave_loss = 0
     i=0
+    train_loss=0
     for batch_x, batch_y in loader:
         batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
         net.zero_grad()
@@ -416,9 +422,10 @@ for epoch in range(800):
     ax2.set_title('Train ACC vs. epoches')
 
     plt.pause(0.1)
-
+    
 #    print('Train--loss=',loss,'ave_loss=',ave_loss,'correct_cnt=' ,correct_cnt,'total_cnt=', total_cnt)
-    print('Train-- acc in train =' ,float(correct_cnt)/float(total_cnt))
+    print('Train-- acc in train =' ,float(correct_cnt)/float(total_cnt),'Train loss=', ave_loss)
+    train_loss = ave_loss
     train_acc=float(correct_cnt)/float(total_cnt)
 
     net.eval()
@@ -449,7 +456,7 @@ for epoch in range(800):
         ave_test_acc = (float(correct_cnt)/total_cnt)
         total_acc+=ave_test_acc
         #ave_test_acc = ave_test_acc/epoch
-    print('Evan print TEST ACC',ave_test_acc,'LOSS',ave_loss)
+    print('Evan TEST LOSS',ave_loss)
 
 #    dataE=[]
 #    for index,data in enumerate(error_pic_number):
@@ -468,10 +475,10 @@ for epoch in range(800):
     ax3 = plt.subplot2grid((3, 3), (2, 0), colspan=3)
     ax3.plot(epoch_plt,acc_test_plt,color='tab:orange')
     ax3.set_title('Test ACC vs. epoches,outside data 288 person')
-    acc=float(correct_cnt)/total_cnt
-    print ('ACC=',acc,'loss',ave_loss,'train_acc',train_acc)
+    test_acc=float(correct_cnt)/total_cnt
+    print ('TEST_ACC=',test_acc,'train_loss',train_loss,'train_acc',train_acc)
 
-    if acc>0.95 and ave_loss < 0.1 and train_acc > 0.98:
+    if test_acc >= 0.80 and train_loss < 0.06 and train_acc > 0.95 :
         break
-torch.save(net,"1219_3m1p6m32p.pkl")
-plt.savefig("PIC_1219_3m1p6m32p.jpg")
+torch.save(net,"0406_1_9M.pkl")
+plt.savefig("PIC_0406_1_9M.jpg")

@@ -6,7 +6,7 @@ import os
 from sys import platform
 import argparse
 
-from evan_NN_nofoot_feature import in_feature
+from evan_NN_nofoot_feature_backup import in_feature
 
 import torch
 
@@ -34,7 +34,7 @@ def draw_prediction(start,end,pred):
     pred_result=pred
     #pred_result=pred_result+5
     x1,y1,x2,y2=start[0],start[1],end[0],end[1]
-    print ('start',start,'end',end,"PRED",pred_result)
+    #print ('start',start,'end',end,"PRED",pred_result)
     moved=(np.linalg.norm(end-start)/2)
     x2=x1+moved
     y1=y1+moved
@@ -164,7 +164,9 @@ class SoftMax_1D(nn.Module):
 
         return prediction_vector
 
-net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
+#net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
+net =torch.load('/home/evan/mp4_to_png/0314/0406_1_9M_epoch80.pkl')
+
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -227,7 +229,7 @@ try:
 
     # Process Image
     datum = op.Datum()
-#    cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
+    #cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
     cap = cv2.VideoCapture('avi/3M_test.avi')
     # Check if camera opened successfully
@@ -243,24 +245,23 @@ try:
         opWrapper.emplaceAndPop([datum])
         # Display the resulting frame
         #cv2.imshow('Frame',datum.cvOutputData)
-        print('Evan input feature')
+        #print('Evan input feature')
 
         x0=in_feature(datum.poseKeypoints) #return to draw in the frame
         x.append(x0)
-        if(len(x) == 10):
+        if(len(x) == 5):
           print('x==5 erase')
           tensor = torch.ones((2,), dtype=torch.float32)
           X=tensor.new_tensor(x)
           X=X.unsqueeze(1) # the data formate should be [batch_size,1,30]
           X=X.cuda()
           out=net(X)
-
           _, pred_label = torch.max(out.data, 1)
           a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
-
           for value in pred_label:
             a[int(value.item())]=a[int(value.item())]+1
-          print('predition label=',np.argmax(a))
+          #print('predition label=',np.argmax(a))
+          print('predition label=',pred_label)
           pred=np.argmax(a)
           x=[]
 
