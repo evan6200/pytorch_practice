@@ -231,7 +231,7 @@ try:
     datum = op.Datum()
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
-    cap = cv2.VideoCapture('avi/3M_test.avi')
+    cap = cv2.VideoCapture('0406_TEST_EVAN.avi')
     # Check if camera opened successfully
     if (cap.isOpened()== False): 
       print("Error opening video stream or file")

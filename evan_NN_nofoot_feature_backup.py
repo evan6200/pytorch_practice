@@ -147,8 +147,9 @@ def in_feature(keypoints):
     #print(f_people)
     #print("Total feature=",i)
     #Evan 0314 end
-    x0=f_people #Evan 0314 change feature for no foot
-    X.append(x0)
+    x0.append(f_people)
+    #x0=f_people #Evan 0314 change feature for no foot
+    #X.append(x0)
     #print ('Xlen=',len(X))
 #  x0=[d_neck,d_rshoulder,d_lshoulder,d_mhip,d_rhip,d_rknee,d_rankle,d_lhip,d_lknee,d_lankle,d_lbigtoe,d_lsmalltoe,d_lheel,d_rbigtoe,d_rsmalltoe,d_rheel]
   
@@ -159,4 +160,4 @@ def in_feature(keypoints):
 #  for i,data in enumerate(x):
 #    x1[i]=x[i]
 #  x=x1
-  return X
+  return f_people
