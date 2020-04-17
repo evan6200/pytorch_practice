@@ -22,5 +22,5 @@ def get_TESTER_data():
           image_path=path+'/'+sub2_dir+'/'+sub3_file
           print('image_path=',image_path,'ground true=',index_sub3)
           x.append(image_path)
-          y.append(index_sub3)
+          y.append(index_sub3) #ground true
   return x,y
