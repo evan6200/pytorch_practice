@@ -40,7 +40,7 @@ def get_TESTER_data():
         sub2_dir_name=[name for name in os.listdir(sub2_dir)]
         sub2_dir_name.sort()
         for index_sub3,sub3_file in enumerate(sub2_dir_name):
-          image_path=path+'/'+sub2_dir+'/'+sub3_file
+          image_path=sub2_dir+'/'+sub3_file
           print('image_path=',image_path,'ground true=',index_sub3)
           x.append(image_path)
           y.append(index_sub3) #ground true
