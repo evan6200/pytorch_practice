@@ -231,6 +231,8 @@ for i in range(0, len(args[1])):
 # oppython = op.OpenposePython()
 x=[]
 y=[]
+result_row=[]
+result_col=[]
 pred=0
 meter=1
 try:
@@ -271,11 +273,15 @@ try:
             a[int(value.item())]=a[int(value.item())]+1
             if(y[i]==value.item()):
               correct=correct+1
+              result_col.append(1)
+            else:
+              result_col.append(0)
+          result_row.append(result_col)            
           print ('correct=',correct)
           #print('predition label=',np.argmax(a))
           print('predition label=',pred_label)
           pred=np.argmax(a)
-
+          result_col=[]
           x=[]
           y=[]
 
@@ -292,7 +298,50 @@ try:
         cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
         cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
         cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)
+    #DRAW picture
+    
+    all_test_count=len(result_row)
+    class_rate = []  #1M->9M 
+    for i in range(7): #class = 7
+      class_rate.append(0)
+    all_data=np.array(result_row)
+    #ACC for each class in all test sample [1M->9M]
+    #class 0, acc rate
+    
+    for i in range(7):
+      class_rate[i]=all_data[:,i].sum()/all_test_count
+    print('class_rate',class_rate) 
+    all_data[:,0].sum()/all_test_count
+    #class 1, acc rate    
+    all_data[:,1].sum()/all_test_count
+    #class 2, acc rate    
+    all_data[:,2].sum()/all_test_count
+    #class 3, acc rate    
+    all_data[:,3].sum()/all_test_count
+    #class 4, acc rate    
+    all_data[:,4].sum()/all_test_count
+    #class 5, acc rate    
+    all_data[:,5].sum()/all_test_count
+    #class 6, acc rate
+    all_data[:,6].sum()/all_test_count  
 
+    class_rate=np.array(class_rate)
+    print('Total ACC Rate',class_rate.sum()/class_rate.size)
+
+    Px=0
+    tmp=[]
+    Meter_rate = []  #1M->9M 
+    for i in range(9): 
+      Meter_rate.append(0)
+    for i in range (9): #9M
+      Px=0
+      tmp=[]
+      for j in range(i,63,9):
+        print('i=Meter',i,'j=index',j,'person num=',Px)
+        Px=Px+1
+        tmp.append(list(all_data[j]))
+      tmp1=np.array(tmp)
+      print(tmp1)
 #      k = cv2.waitKey(33)#ESC
 #      if k==27:    # Esc key to stop
 #        break
