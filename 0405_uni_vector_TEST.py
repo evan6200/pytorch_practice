@@ -1,6 +1,3 @@
-import time
-import sys
-import cv2
 import os
 import json
 import numpy as np
@@ -19,13 +16,6 @@ import matplotlib.pyplot as plt
 number_of_no_foot_feature=4
 
 PLT_UI=False
-
-epoch=800
-if (len(sys.argv)==2):
-  epoch=sys.argv[1]
-
-print('argv LEN',len(sys.argv))
-print('EPOCH =',epoch)
 
 #use cuda 
 assert torch.cuda.is_available()
@@ -59,37 +49,23 @@ k_EVAN_1_9_WITH_CLOTHES='/home/evan/mp4_to_png/CONVERT_VIDEO_PIC/TESTER/ALL_PIC_
 #train C
 k_MIX_7PERSON_C='/home/evan/512_DISK/train_sample_7person/keypoints/7P_keypointsq_mod3_C/'
 
-k_MIX_7PERSON_EVAN='/home/evan/512_DISK/train_sample_7person/keypoints/7P_keypoints_mod3_EVAN/'
-
-k_MIX_7PERSON_Evan3M6M='/home/evan/512_DISK/train_sample_7person/keypoints/7P_keypointsq_mod3_Evan_3M_6M/'
-
-k_MIX_16PERSON='/home/evan/512_DISK/train_sample_7person/keypoints_P8_P16/16P_keypoints_mod3/'
-
-#0501
-final_test='/home/evan/512_DISK/train_sample_7person/keypoints_P8_P16/16P_MOD20/'
-
-#0501
+#0303
 #training sample
-training_keypoint=final_test
+#training_keypoint="/home/evan/mp4_to_png/mix_3M_6M9M/3P1_6P1_P2_9P1_P2/keypoint_mix/"
+training_keypoint=k_MIX_7PERSON_C
+#training_keypoint=k_MIX_0406_1_9M
+
 #test sample
 #3M
 #test_keypoint=k_6mP1
 test_keypoint=k_EVAN_1_9_WITH_CLOTHES
 
-#9M
-#test_video="/home/evan/mp4_to_png/9m_train_data/save_video_p2/keypoint_all_P2TEST/"
-
-#train=6m P1 P2 3m P1 = evan in home
-#keypoint_video=keypoint_video_6mP1_P2_3mP1
-#test=9m P1
-#keypoint_video_P3TEST=keypoint_video_9m_P1TEST
 
 files_TEST=[name for name in os.listdir(test_keypoint)]
 files_TEST.sort()
 
-files=[name for name in os.listdir(training_keypoint)]
-files.sort()
-#os.rename('a.txt', 'b.kml')
+#files=[name for name in os.listdir(training_keypoint)]
+#files.sort()
 start=1
 x0,y0,z0=[],[],[]
 x0_test,y0_test,z0_test=[],[],[]
@@ -295,14 +271,12 @@ def read_data(data_files,key_point_path):
             #print('f_people',len(f_people))
             #print("Total feature=",i)
             #Evan 0314 end
-
-            #0501 skip error frame
-            if (lshoulder[0]>rshoulder[0]):
-              x0.append(f_people) #Evan 0314 change feature for no foot
+            #if (lshoulder[0]>rshoulder[0]):
+            x0.append(f_people) #Evan 0314 change feature for no foot
               #target=[0,0,0,0,0,0,0] #total CLASS,one hot 
               #target[int(label)]= target[int(label)]+1
               #y0.append(target)
-              y0.append(int(label)) #no one hot.
+            y0.append(int(label)) #no one hot.
     return x0,y0
 
 class SoftMax_1D(nn.Module):
@@ -347,7 +321,9 @@ class SoftMax_1D(nn.Module):
 
 #0303 test 
 net = SoftMax_1D(initial_num_channels=1,num_classes=7,num_channels=64)
-#print ('net',net)
+print ('net',net)
+
+net =torch.load('/home/evan/mp4_to_png/0314/0427_uni_vector.pkl')
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -363,24 +339,11 @@ net.train()
 tensor = torch.ones((2,), dtype=torch.float32)
 tensor2 = torch.ones((2,), dtype=torch.float32)
 
-x0,y0= read_data(files,training_keypoint) #training sample
+#x0,y0= read_data(files,training_keypoint) #training sample
 x0_test,y0_test=read_data(files_TEST,test_keypoint)
 
 print('len(x0)=',len(x0))
 
-x_orig=tensor.new_tensor(x0)
-y_orig=tensor2.new_tensor(y0)
-
-total_object_count=list(x_orig.size())[0]
-feature_size=list(x_orig.size())[1]
-y=y_orig.type(torch.LongTensor)
-
-x1=torch.zeros(total_object_count,feature_size,feature_size)
-for i,data in enumerate(x_orig):
-   x1[i]=x_orig[i]
-x=x1
-
-X=x_orig.unsqueeze(1)
 
 #setup test data
 x_test_orig=tensor.new_tensor(x0_test)
@@ -397,102 +360,20 @@ x_test=x1
 
 X_TEST=x_test_orig.unsqueeze(1)
 
-#y=y.type(torch.LongTensor)
-#y_test=y_test.type(torch.LongTensor)
 
-BATCH_SIZE=1024
-#training dataset
-
-torch_dataset=Data.TensorDataset(x,y)
-#test dataset
+BATCH_SIZE=50
 torch_dataset_test=Data.TensorDataset(x_test,y_test)
 
-#print('Evan print y_test DATA',y_test)
+print('Evan print y_test DATA',y_test)
 
-#0303 test 
-randomize = np.arange(len(X)) #randomize data
-np.random.shuffle(randomize)
-X = X[randomize] 
-y = y[randomize]
-
-#separated 30% for validate
-validate_count=int(len(X)*0.2)
-X_val = X[0:validate_count]
-y_val = y[0:validate_count]
-
-X = X[validate_count:]
-y = y[validate_count:]
-
-torch_dataset=Data.TensorDataset(X,y)
 torch_dataset_test=Data.TensorDataset(X_TEST,y_test)
-#30% for validation
-torch_dataset_validate=Data.TensorDataset(X_val,y_val)
 
-loader = Data.DataLoader(dataset=torch_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
-# Validate data, 30% of training data
-loader_test = Data.DataLoader(dataset=torch_dataset_validate,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
 
 #Out side data.
-#loader_test = Data.DataLoader(dataset=torch_dataset_test,batch_size=7,shuffle=False,num_workers=2)
+loader_test = Data.DataLoader(dataset=torch_dataset_test,batch_size=7,shuffle=False,num_workers=2)
 
-if (PLT_UI==True):
-  plt.ion()
-  plt.show()
-
-epoch_plt=[]
-loss_plt=[]
-acc_train_plt=[]
-acc_test_plt=[]
-train_loss=0
-test_loss=0
-for epoch in range(int(epoch)):
-    total_cnt=0
-    correct_cnt, ave_loss = 0, 0
-    ave_loss = 0
-    i=0
-    for batch_x, batch_y in loader:
-        batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
-        net.zero_grad()
-        #target=batch_y.type(torch.LongTensor)
-        i=i+1
-        #print('Epoch:{}|num:{}|batch_x:{}|batch_y:{}'.format(epoch,i,batch_x,batch_y))
-        #print('batch_x',batch_x.size())
-        out=net(batch_x)
-        loss = criterion(out, batch_y)
-        ave_loss = ave_loss * 0.9 + loss.data * 0.1
-        loss.backward()
-        optimizer.step()
-        _, pred_label = torch.max(out.data, 1)
-        #_, real_label = torch.max(batch_y.data,1) # if cross entropy
-        # correct_cnt += (pred_label == real_label).sum()
-        #pred_label.eq(batch_y.view_as(pred_label)).sum().item() # if cross entropy
-        correct_cnt += (pred_label == batch_y).sum() # if cross entropy
-        total_cnt += batch_x.data.size()[0]
-
-    loss_cpu=loss
-    if (PLT_UI==True):
-      epoch_plt.append(epoch)
-      loss_plt.append(ave_loss)
-      acc_train_plt.append(float(correct_cnt)/float(total_cnt))
-      ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=3)
-      #plt.subplot(311) 
-      ax1.plot(epoch_plt,loss_plt,color='tab:green')
-      ax1.set_title('Train loss vs. epoches')
-      #plt.subplot(312)
-      ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=3)
-      ax2.plot(epoch_plt,acc_train_plt,color='tab:blue')
-      ax2.set_title('Train ACC vs. epoches')
-
-      plt.pause(0.1)
-#    print('--------------------------------------------------------')
-#    print('TRAIN LOSS=',loss_cpu.item(),'Train total cnt=',total_cnt)
-    train_loss=loss_cpu.item()
-#    print('Train--loss=',loss,'ave_loss=',ave_loss,'correct_cnt=' ,correct_cnt,'total_cnt=', total_cnt)
-    #print('Train-- acc in train =' ,float(correct_cnt)/float(total_cnt))
-    train_acc=float(correct_cnt)/float(total_cnt)
-
-    net.eval()
-    correct_cnt, ave_loss = 0, 0
+for epoch in range(10):
+    correct_cnt=0
     ave_test_acc = 0
     total_cnt=0
     total_acc=0
@@ -502,56 +383,20 @@ for epoch in range(int(epoch)):
     all_label=[]
     all_error_label=[]
     i=0
-
+    ave_loss=0
     for t_batch_x, t_batch_y in loader_test:
         t_batch_x, t_batch_y = t_batch_x.cuda(),t_batch_y.cuda()
         i=i+1
         out=net(t_batch_x)
-        loss = criterion(out, t_batch_y)
+        #print('out.shape=',out.shape)
         _, pred_label = torch.max(out.data, 1)
-        #_, real_label = torch.max(t_batch_y.data,1)
         total_cnt += t_batch_x.data.size()[0]
-        #correct_cnt += (pred_label == real_label).sum()
         correct_cnt += (pred_label == t_batch_y).sum()
-        ave_loss = ave_loss * 0.9 + loss.data * 0.1
+        #ave_loss = ave_loss * 0.9 + loss.data * 0.1
         
-        #ave_test_acc = ave_test_acc * 0.9 + (float(correct_cnt)/total_cnt) * 0.1
         ave_test_acc = (float(correct_cnt)/total_cnt)
         total_acc+=ave_test_acc
-        #ave_test_acc = ave_test_acc/epoch
-    #print('TEST LOSS=',ave_loss.item(),'TEST total_cnt',total_cnt)
-    test_loss=ave_loss.item()
-#    dataE=[]
-#    for index,data in enumerate(error_pic_number):
-        #print ('pic num={}, predict={}, label={}'.format(error_pic_number[index][0][0].item(),error_predict[index].item(),actual_label[index].item()))
-#        dataE.append([error_pic_number[index][0][0].item(),error_predict[index].item(),actual_label[index].item()]);
-#    dataE.sort()
-#print('TESTING ==>>> epoch: {}, test loss: {:.6f}, acc: {:.3f},aveACC{:.3f}'.format(epoch, ave_loss, float(correct_cnt)/total_cnt,ave_test_acc))
-    #print('all_label',len(all_label))
-#    out_all_label=all_label
-#    out_all_ERR=dataE
-    #print('TESTING ==>>> epoch: {}, test loss: {:.6f}, acc: {:.3f}'.format(epoch, ave_loss, float(correct_cnt)/total_cnt))
-    #print('TESTING ==>>> epoch: {}, test loss: {:.6f}, acc: {:.3f}, correct:{},total_cnt={}'.format(epoch, ave_loss, float(correct_cnt)/total_cnt, correct_cnt,total_cnt))
-    #acc_test_plt.append(float(correct_cnt)/total_cnt)
-    if (PLT_UI==True):
-      acc_test_plt.append(ave_test_acc)
-      ax3 = plt.subplot2grid((3, 3), (2, 0), colspan=3)
-      ax3.plot(epoch_plt,acc_test_plt,color='tab:orange')
-      ax3.set_title('Test ACC vs. epoches,outside data 288 person')
-    acc=float(correct_cnt)/total_cnt
-    #print ('train_acc',train_acc)
-    #print ('TEST ACC=',acc)
-    #if acc>0.70 and ave_loss < 0.4 and train_acc > 0.75:
-    if acc > 0.95 and  train_acc > 0.95:
-        break
+    print('Evan print TEST ACC',ave_test_acc,'total_cnt',total_cnt,'correct_cnt=',correct_cnt)
 
-print('epoch=',epoch)
-print('train_loss=',train_loss)
-print('test_loss=',test_loss)
-print ('train_acc',train_acc)
-print ('TEST ACC=',acc)
-date=time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-print('date=',date)
-torch.save(net,"0501_uni_vector_X_EPOCH.pkl")
 if (PLT_UI==True):
   plt.savefig("PIC_0405_uni_vector.png")
