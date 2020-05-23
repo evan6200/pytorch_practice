@@ -15,6 +15,7 @@ from torch.autograd import Variable
 from sklearn import datasets
 import torch.utils.data as Data
 import matplotlib.pyplot as plt
+from shutil import copyfile
 
 number_of_no_foot_feature=4
 
@@ -65,12 +66,13 @@ k_MIX_7PERSON_Evan3M6M='/home/evan/512_DISK/train_sample_7person/keypoints/7P_ke
 
 k_MIX_16PERSON='/home/evan/512_DISK/train_sample_7person/keypoints_P8_P16/16P_keypoints_mod3/'
 
-#0501
+#0501  #MOD20 -> 16Person
 final_test='/home/evan/512_DISK/train_sample_7person/keypoints_P8_P16/16P_MOD20/'
+final_box_test='/home/evan/512_DISK/train_sample_7person/keypoints_P8_P16/18P_MOD20_WITH_BOX/'
 
 #0501
 #training sample
-training_keypoint=final_test
+training_keypoint=final_box_test
 #test sample
 #3M
 #test_keypoint=k_6mP1
@@ -552,6 +554,9 @@ print ('train_acc',train_acc)
 print ('TEST ACC=',acc)
 date=time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 print('date=',date)
-torch.save(net,"0501_uni_vector_X_EPOCH.pkl")
+save_name="0516_pkl/0501_uni_vector_"+ date + ".pkl"
+torch.save(net,save_name)
+dst="0501_uni_vector_X_EPOCH.pkl"
+copyfile(save_name,dst )
 if (PLT_UI==True):
   plt.savefig("PIC_0405_uni_vector.png")
