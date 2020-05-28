@@ -45,6 +45,7 @@ def get_feature (Point1,Point2): # return separated point of vector
 
 def in_feature(keypoints):
   x0,y0,z0=[],[],[]
+  shoulder_out=[]
   X=[]
   #print('print keypoints',keypoints) 
   min_dist=[]
@@ -84,8 +85,17 @@ def in_feature(keypoints):
   #17 points
     nose= np.array((float(Nose_x),float(Nose_y))) 
     neck= np.array((float(Neck_x),float(Neck_y)))
+    if (RShoulder_x==0):
+      RShoulder_x=LShoulder_x
+    if (RShoulder_y==0):
+      RShoulder_y=LShoulder_y
+    if (LShoulder_x==0):
+      LShoulder_x=RShoulder_x
+    if (LShoulder_y==0):
+      LShoulder_y=RShoulder_y
     rshoulder = np.array((float(RShoulder_x),float(RShoulder_y)))
-    lshoulder = np.array((float(LShoulder_x),float(LShoulder_y))) 
+    lshoulder = np.array((float(LShoulder_x),float(LShoulder_y)))
+     
     mhip = np.array((float(MidHip_x),float(MidHip_y)))
     rhip = np.array((float(RHip_x),float(RHip_y)))
     rknee = np.array((float(RKnee_x),float(RKnee_y)))
@@ -102,6 +112,7 @@ def in_feature(keypoints):
             
     #caculate area of body 
     a=np.linalg.norm(lshoulder-rshoulder)
+    shoulder=a
     b=np.linalg.norm(rshoulder-rhip)
     c=np.linalg.norm(lshoulder-rhip)
     #print('a,b,c',a,b,c)
@@ -158,4 +169,4 @@ def in_feature(keypoints):
     #Evan 0314 end
     #if (lshoulder[0]>rshoulder[0]):
     x0.append(f_people) #Evan 0314 change feature for no foot
-  return x0
+  return x0,a
