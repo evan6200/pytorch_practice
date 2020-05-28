@@ -149,6 +149,22 @@ def print_GEN_METER_RATE(in_data):
   for i in range (int(TOTAL_PERSON)):
     print_N_person_meter_rate(in_data,i+1,1) #gen mode 1 meter only for excel
 
+def print_answer(in_data):
+  all_data=in_data
+  for i in range (9): #9M  
+    Px=0
+    tmp=[]
+    for j in range(i,len(in_data),9): #0501 modified 63 ->81 #0516 81 -> 99
+      #print('Meter=',i+1,'j=index',j,'person num=',Px+1)
+      Px=Px+1
+      for data in all_data[j]:
+        print(data.item(0),end=' ')
+      print(' ')
+      tmp.append(list(all_data[j]))
+    tmp1=np.array(tmp)
+
+
+
 
 def print_N_person_meter_rate(in_data,numN_person,mode):
   index_head_1M=[]
@@ -166,7 +182,7 @@ def print_N_person_meter_rate(in_data,numN_person,mode):
 
   #remove 1M
   N_person_data_remove1M=np.delete(N_person_data, 0, axis=0)
-  test_count=N_person_data.shape[0]
+  test_count=N_person_data_remove1M.shape[0]
   
   N_class_rate=[]
 
@@ -465,12 +481,23 @@ for i in range(0, len(args[1])):
 # Construct it from system arguments
 # op.init_argv(args[1])
 # oppython = op.OpenposePython()
+shoulder_norm=[]
+result_shoulderROW=[]
+result_shoulderCOL=[]
 x=[]
 y=[]
 result_row=[]
 result_col=[]
+
+ans_ROW=[]
+ans_COL=[]
+
+
 pred=0
 meter=1
+#         22.5     45   67.5    80
+arcsine=[0.9239,0.7071,0.3827,0.0468]
+
 try:
     # Starting OpenPose
     opWrapper = op.WrapperPython()
@@ -489,43 +516,70 @@ try:
         #print('index',index)
         if(datum.poseKeypoints.size==1):
           z=np.zeros((1,25,3))
-          x0=in_feature(z)
+          x0,shoulder_source=in_feature(z)
         else:
-          x0=in_feature(datum.poseKeypoints) #return to draw in the frame
+          x0,shoulder_source=in_feature(datum.poseKeypoints) #return to draw in the frame
         x.append(x0)
         y.append(yS[index])
+        #calculate shoulder
+        print("person=",person)
+        #print("shoulder_source",shoulder_source)
+        #shoulderLx=datum.poseKeypoints[0][2][0]
+        #shoulderRx=datum.poseKeypoints[0][5][0]
+        #print("shoulderLx",shoulderLx,"shoulderRx",shoulderRx)
+        #X1=np.array([shoulderLx,0])
+        #X2=np.array([shoulderRx,0])
+        #print("X1",X1,"X2",X2)
+        shoulder_norm.append(shoulder_source)
         if(len(x) == 7):
           if(meter==10):
             meter=1
-          #print('meter=',meter,'person=', person[80:86])
+          print('meter=',meter,'person=', person[80:86])
           meter=meter+1
-          #print('x==7 erase')
-          #print('y gt=',y)
+          print('x==7 erase')
+          print('y gt=',y)
+          print('shoulder_norm',shoulder_norm)
           tensor = torch.ones((2,), dtype=torch.float32)
-          #print('(len(x))',len(x),len(x[0]))
-          #print('index',index)
+          print('(len(x))',len(x),len(x[0]))
+          print('index',index)
           X=tensor.new_tensor(x)
-          #print('before cuda X.shape',X.shape)
+          print('before cuda X.shape',X.shape)
 #          X=X.unsqueeze(1) # the data formate should be [batch_size,1,30]
           X=X.cuda()
-          #print('X shape',X.shape)
+          print('X shape',X.shape)
           out=net(X)
-          #print('cal out')
+          print('cal out')
           _, pred_label = torch.max(out.data, 1)
           a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
           correct=0
           for i, value in enumerate(pred_label):
+            result_shoulderCOL.append(shoulder_norm[i])
+            ans=shoulder_norm[i]
+            if (y[i]==1 or y[i]==4):
+              ans=shoulder_norm[i]/arcsine[0] # 22.5
+            if (y[i]==2 or y[i]==5):
+              ans=shoulder_norm[i]/arcsine[1] # 45
+            if (y[i]==3 or y[i]==6):
+              ans=shoulder_norm[i]/arcsine[2] # 80 67.5
+              
+            
+            ans_COL.append(ans)  #finish recover shoulder distance to class0
             if(y[i]==value.item()):
               correct=correct+1
               result_col.append(1)
             else:
               result_col.append(0)
-          result_row.append(result_col)            
+          result_row.append(result_col)
+          result_shoulderROW.append(result_shoulderCOL)
+          ans_ROW.append(ans_COL)
           #print ('correct=',correct)
           #print('predition label=',pred_label)
           result_col=[]
           x=[]
           y=[]
+          shoulder_norm=[]
+          result_shoulderCOL=[]
+          ans_COL=[]
         #noseX,noseY=datum.poseKeypoints[0][0][0],datum.poseKeypoints[0][0][1]
         #x1,y1,newx,newy=900,400,1000,500
         #start= np.array((float(noseX),float(noseY)))
@@ -543,7 +597,7 @@ try:
     print('END of loop')
     all_test_count=len(result_row)
     all_data=np.array(result_row) 
-    
+    result_shoulderROW=np.array(result_shoulderROW) 
     #Remove 1M 0523
     
     Meter_rate=print_meter_rate(all_data)
@@ -557,7 +611,9 @@ try:
     draw_CLASS_statistic(class_rate_1M)
     draw_METER_statistic_remove_1M(Meter_rate)
 
-    
+    print('answer')
+    #print_answer()
+    print_answer(ans_ROW)    
   
 except Exception as e:
     # print(e)
