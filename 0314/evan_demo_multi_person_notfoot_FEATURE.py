@@ -7,7 +7,8 @@ from sys import platform
 import argparse
 
 #from evan_DEMO_NN_nofoot_feature_UNIT_VECTOR import in_feature  #with foot and with no foot
-from evan_DEMO_NN_ALL_feature_UNIT_VECTOR import in_feature
+#from evan_DEMO_NN_nofoot_feature_UNIT_VECTOR import in_feature
+from evan_DEMO_NN_nofoot_feature_UNIT_VECTOR_FACK_TEST import in_feature
 import torch
 
 
@@ -159,6 +160,49 @@ class SoftMax_1D(nn.Module):
         super(SoftMax_1D, self).__init__()
         self.convnet = nn.Sequential(
             nn.Conv1d(in_channels=initial_num_channels,
+                      out_channels=256, kernel_size=3,stride=2,dilation=2),                      
+            nn.ReLU(inplace=True),
+            #torch.nn.BatchNorm1d(256),
+            nn.Conv1d(in_channels=256, out_channels=256,
+                      kernel_size=3,stride=2,padding=0,dilation=2),
+            nn.ReLU(inplace=True),
+            torch.nn.Dropout(0.2),
+            nn.Conv1d(in_channels=256, out_channels=256,
+                      kernel_size=3,stride=2),
+            nn.ReLU(inplace=True),
+            #torch.nn.BatchNorm1d(256,affine=True),
+            torch.nn.Dropout(0.2),
+            nn.Conv1d(in_channels=256,
+                      out_channels=256, kernel_size=3,stride=2),  #0427 kernel_size 2->3
+            nn.ReLU(inplace=True),
+            #torch.nn.BatchNorm1d(64,affine=True),
+            torch.nn.Dropout(0.2),
+            nn.Conv1d(in_channels=256,
+                      out_channels=64, kernel_size=3,stride=2),
+            
+            nn.ReLU(inplace=True)
+        
+        )
+        self.fc1 = nn.Linear(64, 64)
+        self.fc = nn.Linear(64, num_classes)
+
+    def forward(self, x):
+        #print('x shape',x.shape)  
+        #print('x',x)     
+        #print('self.convnet(x).shape',self.convnet(x).shape)
+        #print('self.convnet(x)',self.convnet(x))
+        features = self.convnet(x).squeeze(dim=2)
+#        print('features',features.size())
+        prediction_vector = self.fc(features)
+#        print('prediction_vector',prediction_vector.size())
+        #return prediction_vector
+        return F.log_softmax(prediction_vector,dim=1)
+
+class SoftMax_1D(nn.Module):
+    def __init__(self, initial_num_channels, num_classes, num_channels):
+        super(SoftMax_1D, self).__init__()
+        self.convnet = nn.Sequential(
+            nn.Conv1d(in_channels=initial_num_channels,
                       out_channels=512, kernel_size=4,stride=3),                      
             nn.ReLU(inplace=True),
             #torch.nn.BatchNorm1d(256),
@@ -200,7 +244,8 @@ class SoftMax_1D(nn.Module):
 #net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
 #net =torch.load('0322_no_foot.pkl')
 #net = torch.load('0605_demo_uni_vector_X_EPOCH.pkl')
-net = torch.load('0605_demo_pkl/0605_uni_vector_2020-06-12_13:00:50.pkl')
+#net = torch.load('/home/evan/mp4_to_png/0314/0516_pkl/0501_uni_vector_2020-06-12_17:14:52.pkl')
+net = torch.load('0501_uni_vector_X_EPOCH.pkl')
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,

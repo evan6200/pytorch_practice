@@ -6,8 +6,8 @@ import os
 from sys import platform
 import argparse
 
-#from evan_DEMO_NN_nofoot_feature_UNIT_VECTOR import in_feature  #with foot and with no foot
-from evan_DEMO_NN_ALL_feature_UNIT_VECTOR import in_feature
+from evan_NN_nofoot_feature import in_feature
+
 import torch
 
 
@@ -159,48 +159,38 @@ class SoftMax_1D(nn.Module):
         super(SoftMax_1D, self).__init__()
         self.convnet = nn.Sequential(
             nn.Conv1d(in_channels=initial_num_channels,
-                      out_channels=512, kernel_size=4,stride=3),                      
+                      out_channels=256, kernel_size=3,stride=2,dilation=2),                  
             nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(256),
-            nn.Conv1d(in_channels=512, out_channels=256,
-                      kernel_size=4,stride=3,padding=0),
+#            torch.nn.BatchNorm1d(128),
+            nn.Conv1d(in_channels=256, out_channels=256,
+                      kernel_size=3,stride=2,padding=0,dilation=2),
             nn.ReLU(inplace=True),
             torch.nn.Dropout(0.2),
             nn.Conv1d(in_channels=256, out_channels=256,
-                      kernel_size=4,stride=3),
+                      kernel_size=3,stride=2),
             nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(256,affine=True),
+#            torch.nn.BatchNorm1d(64,affine=True),
             torch.nn.Dropout(0.2),
             nn.Conv1d(in_channels=256,
-                      out_channels=256, kernel_size=3,stride=2),  #0427 kernel_size 2->3
-            nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(64,affine=True),
-            torch.nn.Dropout(0.2),
-            nn.Conv1d(in_channels=256,
-                      out_channels=64, kernel_size=3,stride=2,padding=1),
-            
+                      out_channels=64, kernel_size=2,stride=2),
+
             nn.ReLU(inplace=True)
-        
         )
         self.fc1 = nn.Linear(64, 64)
         self.fc = nn.Linear(64, num_classes)
 
     def forward(self, x):
-        #print('x shape',x.shape)  
-        #print('x',x)     
-        #print('self.convnet(x).shape',self.convnet(x).shape)
-        #print('self.convnet(x)',self.convnet(x))
+#        print('x',x.size())       
         features = self.convnet(x).squeeze(dim=2)
 #        print('features',features.size())
         prediction_vector = self.fc(features)
 #        print('prediction_vector',prediction_vector.size())
-        #return prediction_vector
-        return F.log_softmax(prediction_vector,dim=1)
+
+        return prediction_vector
 
 #net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
-#net =torch.load('0322_no_foot.pkl')
-#net = torch.load('0605_demo_uni_vector_X_EPOCH.pkl')
-net = torch.load('0605_demo_pkl/0605_uni_vector_2020-06-12_13:00:50.pkl')
+net =torch.load('0322_no_foot.pkl')
+#net = torch.load('0605_demo_pkl/0605_uni_vector_2020-06-12_13:00:50.pkl')
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -271,8 +261,8 @@ try:
     datum = op.Datum()
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
-    cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0354.MP4')
-    #cap = cv2.VideoCapture(sys.argv[1])
+    #cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0354.MP4')
+    cap = cv2.VideoCapture(sys.argv[1])
     #cap = cv2.VideoCapture('avi/3M_test.avi')
     # Check if camera opened successfully
     if (cap.isOpened()== False): 
@@ -288,7 +278,7 @@ try:
         opWrapper.emplaceAndPop([datum])
        
         all_P_F.append(datum.poseKeypoints)
-        #time.sleep(10)
+        
         if ( 5 == len(all_P_F)):
           collect_frame=len(all_P_F)
           fps=0
@@ -332,12 +322,11 @@ try:
           #break 
           x=in_feature(x1) #return to draw in the frame       
           print('finish feature extracted') 
-          #time.sleep(10)
           person=0
           frame=datum.cvOutputData
           for p in x:
             pX=torch.from_numpy(p).float()  
-            #pX=pX.unsqueeze(1)
+            pX=pX.unsqueeze(1)
             pX=pX.cuda()
             out=net(pX)
             _, pred_label = torch.max(out.data, 1)
@@ -345,7 +334,7 @@ try:
 
             for value in pred_label:
               a[int(value.item())]=a[int(value.item())]+1
-              #print('predition label=',np.argmax(a))
+              print('predition label=',np.argmax(a))
               pred=np.argmax(a)
             #noseX,noseY=x0[person][1][0],x0[person][1][1]
             #print('neckXY',x0[person][1][0],x0[person][1][1],'pred',pred)

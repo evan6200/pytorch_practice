@@ -6,7 +6,7 @@ import os
 from sys import platform
 import argparse
 
-from evan_NN_nofoot_feature_backup import in_feature
+from evan_NN import net_model
 
 import torch
 
@@ -29,83 +29,31 @@ import matplotlib.pyplot as plt
 assert torch.cuda.is_available()
 device = torch.device("cuda")
 
-def draw_prediction(start,end,pred):
-    fontsize=2
-    pred_result=pred
-    #pred_result=pred_result+5
-    x1,y1,x2,y2=start[0],start[1],end[0],end[1]
-    print ('start',start,'end',end,"PRED",pred_result)
-    moved=(np.linalg.norm(end-start)/2)
-    x2=x1+moved
-    y1=y1+moved
-    y2=y2+moved
-    if pred_result==0:
-        angle=np.arctan2(1,0) #down
-        newx = ((x2-x1)*np.cos(angle+np.pi/6)-(y2-y1)*np.sin(angle+np.pi/6)) + x1
-        newy = ((x2-x1)*np.sin(angle+np.pi/6)+(y2-y1)*np.cos(angle+np.pi/6)) + y1
-        newxL = ((x2-x1)*np.cos(angle+np.pi/6)-(y2-y1)*np.sin(angle)) + x1
-        newyL = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1    
-        newxR = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newyR = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
 
-    if pred_result==1:
-        angle=np.arctan2(2.414,-1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==2:
-        angle=np.arctan2(1,-1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==3:
-        angle=np.arctan2(0.414,-1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==4:
-        angle=np.arctan2(1,0.414)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==5:
-        angle=np.arctan2(1,1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==6:
-        angle=np.arctan2(0.414,1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-    if pred_result==7:
-        angle=np.arctan2(1,1)
-        newx = ((x2-x1)*np.cos(angle)-(y2-y1)*np.sin(angle)) + x1
-        newy = ((x2-x1)*np.sin(angle)+(y2-y1)*np.cos(angle)) + y1
-        cv2.arrowedLine(img2,(int(x1), int(y1)),(int(newx),int(newy)),(255,0,255),3)
-    return x1,y1,newx,newy
-
-
-class SoftMax_1D(nn.Module):
+class SoftMax(nn.Module):
     def __init__(self, initial_num_channels, num_classes, num_channels):
-        super(SoftMax_1D, self).__init__()
+        super(SoftMax, self).__init__()
         self.convnet = nn.Sequential(
             nn.Conv1d(in_channels=initial_num_channels,
-                      out_channels=256, kernel_size=3,stride=2,dilation=2),                  
+                      out_channels=256, kernel_size=3,stride=2),            
             nn.ReLU(inplace=True),
 #            torch.nn.BatchNorm1d(128),
-            nn.Conv1d(in_channels=256, out_channels=256,
-                      kernel_size=3,stride=2,padding=0,dilation=2),
+            nn.Conv1d(in_channels=256, out_channels=128,
+                      kernel_size=3,stride=2),
             nn.ReLU(inplace=True),
             torch.nn.Dropout(0.2),
-            nn.Conv1d(in_channels=256, out_channels=256,
+            nn.Conv1d(in_channels=128, out_channels=64,
                       kernel_size=3,stride=2),
             nn.ReLU(inplace=True),
 #            torch.nn.BatchNorm1d(64,affine=True),
             torch.nn.Dropout(0.2),
-            nn.Conv1d(in_channels=256,
-                      out_channels=64, kernel_size=2,stride=2),
+            nn.Conv1d(in_channels=64,
+                      out_channels=32, kernel_size=1,stride=1),
 
             nn.ReLU(inplace=True)
+
         )
-        self.fc1 = nn.Linear(64, 64)
-        self.fc = nn.Linear(64, num_classes)
+        self.fc = nn.Linear(32, num_classes)
 
     def forward(self, x):
 #        print('x',x.size())       
@@ -116,7 +64,7 @@ class SoftMax_1D(nn.Module):
 
         return prediction_vector
 
-net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
+net =torch.load('/home/evan/mp4_to_png/MODEL_1213_9m_P1_P2.pkl')
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -124,15 +72,14 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                            patience=1)
 #class_weights = 1.0 / torch.tensor(class_label, dtype=torch.float32)
 #class_weights=class_weights.to(device)
-criterion = nn.CrossEntropyLoss()#(weight=class_weights)
-#criterion=nn.MSELoss()
-
+#criterion = nn.CrossEntropyLoss(weight=class_weights)
+criterion=nn.MSELoss()
 
 print ('net',net)
 
 
 # Import Openpose (Windows/Ubuntu/OSX)
-__file__='evan_demo_6m_0316_1DCNN.py '
+__file__='evan_demo.py'
 dir_path = os.path.dirname(os.path.realpath(__file__))
 try:
     # Change these variables to point to the correct folder (Release/x64 etc.) 
@@ -170,7 +117,6 @@ for i in range(0, len(args[1])):
 # op.init_argv(args[1])
 # oppython = op.OpenposePython()
 x=[]
-pred=0
 try:
     # Starting OpenPose
     opWrapper = op.WrapperPython()
@@ -179,9 +125,7 @@ try:
 
     # Process Image
     datum = op.Datum()
-#    cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
-    #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
-    cap = cv2.VideoCapture('avi/0322_4M_EVAN_limited_test_mid.avi')
+    cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314/avi/3M_test.avi ')
     # Check if camera opened successfully
     if (cap.isOpened()== False): 
       print("Error opening video stream or file")
@@ -194,40 +138,40 @@ try:
         datum.cvInputData = imageToProcess
         opWrapper.emplaceAndPop([datum])
         # Display the resulting frame
-        #cv2.imshow('Frame',datum.cvOutputData)
-        print('Evan input feature')
-
-        x0=in_feature(datum.poseKeypoints) #return to draw in the frame
+        cv2.imshow('Frame',datum.cvOutputData)
+        x0=net_model(datum.poseKeypoints) #return to draw in the frame
         x.append(x0)
-        if(len(x) == 10):
+ 
+        if(len(x) == 25):
           print('x==5 erase')
           tensor = torch.ones((2,), dtype=torch.float32)
           X=tensor.new_tensor(x)
-          X=X.unsqueeze(1) # the data formate should be [batch_size,1,30]
+          total_object_count=list(X.size())[0]
+          feature_size=list(X.size())[1]
+          x1=torch.zeros(total_object_count,feature_size,feature_size)
+          for i,data in enumerate(X):
+            x1[i]=X[i]
+          X=x1
+          #print ('X size',X.size(), 'DATA',X)
           X=X.cuda()
           out=net(X)
-
           _, pred_label = torch.max(out.data, 1)
-          a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
-
-          for value in pred_label:
-            a[int(value.item())]=a[int(value.item())]+1
-          print('predition label=',np.argmax(a))
-          pred=np.argmax(a)
+          print ("predict",pred_label)
           x=[]
-
-        noseX,noseY=datum.poseKeypoints[0][0][0],datum.poseKeypoints[0][0][1]
-        x1,y1,newx,newy=900,400,1000,500
-        start= np.array((float(noseX),float(noseY)))
-        end=np.array((float(noseX)+100,float(noseY)))
-        frame=datum.cvOutputData
-        x1,y1,newx,newy=draw_prediction(start,end,pred)
-        cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newx),int(newy)-150),(255,0,255),3)
-      cv2.imshow('Frame',frame) 
+        
+        #print (datum.poseKeypoints)
+        #break
       # Press Q on keyboard to  exit
       k = cv2.waitKey(33)#ESC
       if k==27:    # Esc key to stop
         break
+#    imageToProcess = cv2.imread(args[0].image_path)
+#    datum.cvInputData = imageToProcess
+#    opWrapper.emplaceAndPop([datum])
+
+    # Display Image
+#    print("Body keypoints: \n" + str(datum.poseKeypoints))
+#    cv2.imshow("OpenPose 1.5.1 - Tutorial Python API", datum.cvOutputData)
     #cv2.waitKey(0)
     #cap.release()
 except Exception as e:

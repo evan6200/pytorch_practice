@@ -4,17 +4,23 @@ import sys
 
 #translate MP4 to avi
 
+if (len(sys.argv) <=3 ):
+  print ('usage: python player_test.py src.mp4 output.avi start_second')
+  sys.exit() 
 cap = cv2.VideoCapture(sys.argv[1])
 
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-out = cv2.VideoWriter('0322_EVAN_test_multi_person.avi', fourcc, 30, (1920,1080))
+# $1 output file
+# $2 input file
+# $3 start_second
+out = cv2.VideoWriter(sys.argv[2], fourcc, 30, (1920,1080))
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
   print("Error opening video stream or file")
 
-cap.set(1,60*5) #skip number of frame
+cap.set(1,60*int(sys.argv[3])) #skip number of frame
 
 while(cap.isOpened()):
   # Capture frame-by-frame

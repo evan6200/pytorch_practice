@@ -31,7 +31,7 @@ def get_feature (Point1,Point2): # return separated point of vector
 
     #create the points 
     #number_of_points=number_of_no_foot_feature
-    number_of_points=4
+    number_of_points=3
     xs=np.linspace(X1,X2,number_of_points+2)
     ys=np.linspace(Y1,Y2,number_of_points+2)
 

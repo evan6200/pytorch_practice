@@ -34,22 +34,16 @@ k_3mP1="/home/evan/mp4_to_png/3m/save_video_p1/keypoint_3MP1/"
 k_MIX_3P1_6P1P2="/home/evan/mp4_to_png/mix_3M_6M/3P1_6P1_P2/keypoint_mix/"
 k_MIX_3P1_6M_P1P2P3="/home/evan/mp4_to_png/mix_3M_6M/3P1_6P1_P2_P3/keypoint_mix/"
 k_MIX_3P1_6M_P1P2_9P1="/home/evan/mp4_to_png/mix_3M_6M9M/3P1_6P1_P2_9P1/keypoint_mix/"
-
-#0406
-k_MIX_0406_1_9M="/home/evan/mp4_to_png/CONVERT_VIDEO_PIC/train_sample_0406/keypoint_0406_1M_9M/"
-
-k_7Person="/home/evan/512_DISK/train_sample_7person/keypoints/7P_keypoints/"
-
+#0303
+#training sample
+#training_keypoint="/home/evan/mp4_to_png/mix_3M_6M9M/3P1_6P1_P2_9P1_P2/keypoint_mix/"
+training_keypoint=k_MIX_3P1_6M_P1P2P3
 
 
 #test sample
 #3M
 test_keypoint=k_6mP3
 
-#0422 start
-training_keypoint=k_7Person
-test_keypoint=k_6mP1
-#0422 end
 
 #9M
 #test_video="/home/evan/mp4_to_png/9m_train_data/save_video_p2/keypoint_all_P2TEST/"
@@ -96,6 +90,9 @@ class_label=[]
 for i in range(label):
     class_label.append(0)
 
+def get_unit_vector(start,end):
+   return (end-start)/np.linalg.norm(end-start)
+
 
 def get_dist(start,end):
    return np.linalg.norm(end-start)
@@ -107,6 +104,7 @@ def read_data(data_files,key_point_path):
         index_label=filename.find('_')
         filepath=key_point_path+filename
         label=filename[6:7] # save label
+#        print label
         if ( int(label[0]) == 0):
             class_label[0]=class_label[0]+1
         if ( int(label[0]) == 1):
@@ -233,6 +231,19 @@ def read_data(data_files,key_point_path):
             #all_feature=np.concatenate((all_feature,lag_heelL),axis=0)
             test_feature=np.concatenate((all_feature,test_feature),axis=0)
 
+            #0405 modified unit vector
+            top_uni=get_unit_vector(rshoulder,lshoulder)    # return separated point of vector
+            bottom_uni=get_unit_vector(rhip,lhip)
+            left_uni=get_unit_vector(lshoulder,lhip)
+            right_uni=get_unit_vector(rshoulder,rhip)
+            lagR_uni=get_unit_vector(rhip,rknee)
+            lagL_uni=get_unit_vector(lhip,lknee)
+            all_unit_vector=np.concatenate((top_uni,bottom_uni),axis=0)
+            all_unit_vector=np.concatenate((all_unit_vector,left_uni),axis=0)
+            all_unit_vector=np.concatenate((all_unit_vector,right_uni),axis=0)
+            all_unit_vector=np.concatenate((all_unit_vector,lagR_uni),axis=0)
+            all_unit_vector=np.concatenate((all_unit_vector,lagL_uni),axis=0)
+
 
             i=0
             f_people=[]
@@ -241,15 +252,25 @@ def read_data(data_files,key_point_path):
                 #print('X',x)
                 i=i+1
                 f_people.append(x)
-                
+            for unit_data in all_unit_vector:
+                f_people.append(unit_data)
+            #print('f_people',len(f_people))
             #print("Total feature=",i)
             #Evan 0314 end
-    #        if (lshoulder[0]>rshoulder[0]):
             x0.append(f_people) #Evan 0314 change feature for no foot
+
+#            d_rbigtoe=get_dist(gravityXY,rbigtoe)/get_dist(neck,mhip)
+#            d_rsmalltoe=get_dist(gravityXY,rsmalltoe)/get_dist(neck,mhip)
+#            d_rheel=get_dist(gravityXY,rheel)/get_dist(neck,mhip)
+            #total 16 feature
+            #x0.append([d_neck,d_rshoulder,d_lshoulder,d_mhip,d_rhip,d_rknee,d_rankle,d_lhip,d_lknee,d_lankle,d_lbigtoe,d_lsmalltoe,d_lheel,d_rbigtoe,d_rsmalltoe,d_rheel])
             target=[0,0,0,0,0,0,0] #total CLASS,one hot 
-              #target[int(label)]= target[int(label)]+1
-              #y0.append(target)
+            #target[int(label)]= target[int(label)]+1
+            #y0.append(target)
             y0.append(int(label))
+            # x0.append([])
+        #if index == 1:
+        #    break
     return x0,y0
 
 class SoftMax_1D(nn.Module):
@@ -259,11 +280,11 @@ class SoftMax_1D(nn.Module):
             nn.Conv1d(in_channels=initial_num_channels,
                       out_channels=256, kernel_size=3,stride=2,dilation=2),                      
             nn.ReLU(inplace=True),
-            torch.nn.BatchNorm1d(256),
+#            torch.nn.BatchNorm1d(128),
             nn.Conv1d(in_channels=256, out_channels=256,
                       kernel_size=3,stride=2,padding=0,dilation=2),
             nn.ReLU(inplace=True),
-            #torch.nn.Dropout(0.2),
+            torch.nn.Dropout(0.2),
             nn.Conv1d(in_channels=256, out_channels=256,
                       kernel_size=3,stride=2),
             nn.ReLU(inplace=True),
@@ -363,10 +384,12 @@ y = y[validate_count:]
 
 torch_dataset=Data.TensorDataset(X,y)
 torch_dataset_test=Data.TensorDataset(X_TEST,y_test)
+#30% for validation
 #torch_dataset_validate=Data.TensorDataset(X_val,y_val)
 
 loader = Data.DataLoader(dataset=torch_dataset,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
 #loader_test = Data.DataLoader(dataset=torch_dataset_validate,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
+
 loader_test = Data.DataLoader(dataset=torch_dataset_test,batch_size=BATCH_SIZE,shuffle=True,num_workers=2)
 
 plt.ion()
@@ -380,7 +403,6 @@ for epoch in range(800):
     correct_cnt, ave_loss = 0, 0
     ave_loss = 0
     i=0
-    train_loss=0
     for batch_x, batch_y in loader:
         batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
         net.zero_grad()
@@ -414,10 +436,9 @@ for epoch in range(800):
     ax2.set_title('Train ACC vs. epoches')
 
     plt.pause(0.1)
-    
+
 #    print('Train--loss=',loss,'ave_loss=',ave_loss,'correct_cnt=' ,correct_cnt,'total_cnt=', total_cnt)
-    print('Train-- acc in train =' ,float(correct_cnt)/float(total_cnt),'Train loss=', ave_loss)
-    train_loss = ave_loss
+    print('Train-- acc in train =' ,float(correct_cnt)/float(total_cnt))
     train_acc=float(correct_cnt)/float(total_cnt)
 
     net.eval()
@@ -448,7 +469,7 @@ for epoch in range(800):
         ave_test_acc = (float(correct_cnt)/total_cnt)
         total_acc+=ave_test_acc
         #ave_test_acc = ave_test_acc/epoch
-    print('Evan TEST LOSS',ave_loss)
+    print('Evan print TEST ACC',ave_test_acc,'LOSS',ave_loss)
 
 #    dataE=[]
 #    for index,data in enumerate(error_pic_number):
@@ -467,10 +488,10 @@ for epoch in range(800):
     ax3 = plt.subplot2grid((3, 3), (2, 0), colspan=3)
     ax3.plot(epoch_plt,acc_test_plt,color='tab:orange')
     ax3.set_title('Test ACC vs. epoches,outside data 288 person')
-    test_acc=float(correct_cnt)/total_cnt
-    print ('TEST_ACC=',test_acc,'train_loss',train_loss,'train_acc',train_acc)
+    acc=float(correct_cnt)/total_cnt
+    print ('ACC=',acc,'loss',ave_loss,'train_acc',train_acc)
 
-    if test_acc >= 0.80 and train_acc>0.95:# and train_loss < 0.06 and train_acc > 0.95 :
+    if acc>0.95 and ave_loss < 0.2 and train_acc > 0.90:
         break
-torch.save(net,"0422_1_9M.pkl")
-plt.savefig("PIC_0422_1_9M.jpg")
+torch.save(net,"1219_3m1p6m32p.pkl")
+plt.savefig("PIC_1219_3m1p6m32p.jpg")

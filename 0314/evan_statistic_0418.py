@@ -6,8 +6,8 @@ import os
 from sys import platform
 import argparse
 
-#from evan_DEMO_NN_nofoot_feature_UNIT_VECTOR import in_feature  #with foot and with no foot
-from evan_DEMO_NN_ALL_feature_UNIT_VECTOR import in_feature
+from evan_NN_nofoot_feature_backup import in_feature
+
 import torch
 
 
@@ -26,39 +26,101 @@ from sklearn import datasets
 import torch.utils.data as Data
 import matplotlib.pyplot as plt
 
-from threading import Thread 
-import time
+#0418
+sys.path.append('/home/evan/mp4_to_png/CONVERT_VIDEO_PIC/TESTER/ALL_TEST_DATA')
 
-#if (len(sys.argv) <=1):
-#  print('usage: python evan_demo_multi_person.py source.avi')
-#  sys.exit()
+from gen_statistic import get_TESTER_data
+import gen_statistic
 
-def fire(data):
-  print('in thread print', data )  
-
-
-def timer(name,delay,times,d):
-    print("計時器: "+ name + "開始" )
-    while times > 0:
-        time.sleep(delay)
-        print(name + ": " + str(time.ctime(time.time())))
-        times -= 1
-        print(np.array(d).shape)
-    print("計時器: " + name + "完成")
+xS,yS=gen_statistic.get_TESTER_data() # x,y for statistic.
+CLASSES=7
 
 #use cuda 
 assert torch.cuda.is_available()
 device = torch.device("cuda")
 
-def get_dist(start,end):
-   return np.linalg.norm(end-start)
+def draw_CLASS_statistic(class_rate):
+  plt.ion()
+  plt.show()
+  class_plt=[]
+  class_plt = list(range(1,7))
+  class_plt.append(7)
+  class_plt
 
+  plt.plot(class_plt,class_rate,label="1M->9M",color="red",linewidth=2)
+  plt.xlabel("Class")
+  plt.ylabel("Accuracy")
+  plt.ylim(0,1)
+  plt.legend()
+  plt.grid(True)
+  plt.show()
+  plt.savefig("CLASS_ACC_7P_1M9M_0425.png")
+  plt.cla()
+
+
+def draw_METER_statistic(Meter_rate):
+  plt.ion()
+  plt.show()
+
+  meter_plt=[]
+  meter_plt = list(range(1,9))
+  meter_plt.append(9)
+  meter_plt
+
+  plt.plot(meter_plt,Meter_rate,label="CLASS1->CLASS7",color="red",linewidth=2)
+  plt.xlabel("Meter")
+  plt.ylabel("Accuracy")
+  plt.ylim(0,1)
+  plt.legend()
+  plt.grid(True)
+  plt.show()
+  plt.savefig("MEMTER_ACC_7P_1M9M_0425.png")
+
+
+
+def print_class_rate(in_data,all_people):
+    all_data=in_data
+    all_test_count=all_people
+    class_rate = []  #1M->9M 
+    for i in range(CLASSES): #class = 7
+      class_rate.append(0)
+    for i in range(CLASSES):
+      class_rate[i]=all_data[:,i].sum()/all_test_count
+    print('class_rate',class_rate)
+    class_rate=np.array(class_rate)
+    print('Total ACC Rate',class_rate.sum()/class_rate.size)
+    return class_rate
+def print_meter_rate(in_data):
+    all_data=in_data
+    tmp=[]
+    Meter_rate = []  #1M->9M 
+    #for i in range(9):
+    #  Meter_rate.append(0)
+    for i in range (9): #9M
+      Px=0
+      tmp=[]
+      for j in range(i,63,9):
+        #print('i=Meter',i,'j=index',j,'person num=',Px)
+        Px=Px+1
+        tmp.append(list(all_data[j]))
+      tmp1=np.array(tmp)
+      print('Total person Px=',Px,'in Meter=',i+1)
+      print('class1',tmp1[0:,0].sum()/Px)  #class 1
+      print('class2',tmp1[0:,1].sum()/Px)  #class 2
+      print('class3',tmp1[0:,2].sum()/Px)  #class 3
+      print('class4',tmp1[0:,3].sum()/Px)  #class 4
+      print('class5',tmp1[0:,4].sum()/Px)  #class 5
+      print('class6',tmp1[0:,5].sum()/Px)  #class 6
+      print('class7',tmp1[0:,6].sum()/Px)  #class 7
+      print('Meter Rate',i+1,tmp1.sum()/tmp1.size)
+      Meter_rate.append(tmp1.sum()/tmp1.size)
+    return Meter_rate
 def draw_prediction(start,end,pred):
     fontsize=2
     pred_result=pred
     #pred_result=pred_result+5
     x1,y1,x2,y2=start[0],start[1],end[0],end[1]
-    print ('start',start,'end',end,"PRED",pred_result)
+    #print ('start',start,'end',end,"PRED",pred_result)
     moved=(np.linalg.norm(end-start)/2)
     x2=x1+moved
     y1=y1+moved
@@ -159,48 +221,39 @@ class SoftMax_1D(nn.Module):
         super(SoftMax_1D, self).__init__()
         self.convnet = nn.Sequential(
             nn.Conv1d(in_channels=initial_num_channels,
-                      out_channels=512, kernel_size=4,stride=3),                      
+                      out_channels=256, kernel_size=3,stride=2,dilation=2),                  
             nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(256),
-            nn.Conv1d(in_channels=512, out_channels=256,
-                      kernel_size=4,stride=3,padding=0),
+#            torch.nn.BatchNorm1d(128),
+            nn.Conv1d(in_channels=256, out_channels=256,
+                      kernel_size=3,stride=2,padding=0,dilation=2),
             nn.ReLU(inplace=True),
             torch.nn.Dropout(0.2),
             nn.Conv1d(in_channels=256, out_channels=256,
-                      kernel_size=4,stride=3),
+                      kernel_size=3,stride=2),
             nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(256,affine=True),
+#            torch.nn.BatchNorm1d(64,affine=True),
             torch.nn.Dropout(0.2),
             nn.Conv1d(in_channels=256,
-                      out_channels=256, kernel_size=3,stride=2),  #0427 kernel_size 2->3
-            nn.ReLU(inplace=True),
-            #torch.nn.BatchNorm1d(64,affine=True),
-            torch.nn.Dropout(0.2),
-            nn.Conv1d(in_channels=256,
-                      out_channels=64, kernel_size=3,stride=2,padding=1),
-            
+                      out_channels=64, kernel_size=2,stride=2),
+
             nn.ReLU(inplace=True)
-        
         )
         self.fc1 = nn.Linear(64, 64)
         self.fc = nn.Linear(64, num_classes)
 
     def forward(self, x):
-        #print('x shape',x.shape)  
-        #print('x',x)     
-        #print('self.convnet(x).shape',self.convnet(x).shape)
-        #print('self.convnet(x)',self.convnet(x))
+#        print('x',x.size())       
         features = self.convnet(x).squeeze(dim=2)
 #        print('features',features.size())
         prediction_vector = self.fc(features)
 #        print('prediction_vector',prediction_vector.size())
-        #return prediction_vector
-        return F.log_softmax(prediction_vector,dim=1)
+
+        return prediction_vector
 
 #net =torch.load('/home/evan/mp4_to_png/0314/0316_1D_without_foot.pkl')
-#net =torch.load('0322_no_foot.pkl')
-#net = torch.load('0605_demo_uni_vector_X_EPOCH.pkl')
-net = torch.load('0605_demo_pkl/0605_uni_vector_2020-06-12_13:00:50.pkl')
+net =torch.load('/home/evan/mp4_to_png/0314/0406_1_9M_epoch80.pkl')
+net =torch.load('/home/evan/mp4_to_png/0314/0422_1_9M.pkl')
+
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -254,13 +307,11 @@ for i in range(0, len(args[1])):
 # op.init_argv(args[1])
 # oppython = op.OpenposePython()
 x=[]
-all_P_F=[]
+y=[]
+result_row=[]
+result_col=[]
 pred=0
-last_frame_people=0
-fps=0
-noseX,noseY=0,0
-multi_pred=[]
-collect_frame=0
+meter=1
 try:
     # Starting OpenPose
     opWrapper = op.WrapperPython()
@@ -269,114 +320,71 @@ try:
 
     # Process Image
     datum = op.Datum()
-    #cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
-    #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
-    cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0354.MP4')
-    #cap = cv2.VideoCapture(sys.argv[1])
-    #cap = cv2.VideoCapture('avi/3M_test.avi')
-    # Check if camera opened successfully
-    if (cap.isOpened()== False): 
-      print("Error opening video stream or file")
-#    t1 = Thread(target=timer,args=("程式1",1,5,all_P_F))
-#    t1.start() 
-    while(cap.isOpened()):
-      # Capture frame-by-frame
-      ret, frame = cap.read()
-      if ret == True:
+   
+    for index,person in enumerate(xS):
+#        print ('person',person)    
+        frame=cv2.imread(person)
         imageToProcess = frame
         datum.cvInputData = imageToProcess
-        opWrapper.emplaceAndPop([datum])
-       
-        all_P_F.append(datum.poseKeypoints)
-        #time.sleep(10)
-        if ( 5 == len(all_P_F)):
-          collect_frame=len(all_P_F)
-          fps=0
-          x0=all_P_F[0]#t-1  , the first frame is t-1
-          all_P_F.pop(0)
-          x1=np.expand_dims(x0,axis=0) #(1,6,25,3) the first frame
-          frame_t=[]
-          for frame in all_P_F: #other frames is t t+1...t+N
-            fps=fps+1
-            d=[]
-            p1=[]
-            for p in x0:
-              all_dist=[]
-              start=np.array(p[1][0],p[1][1])
-              for pT in frame: #T frame
-                end=np.array(pT[1][0],pT[1][0])
-                d=get_dist(start,end)
-                all_dist.append(d)
-              np_all_dist=np.array(all_dist)
-              idx=np.argmin(np_all_dist) #find nearest people
-              if(np_all_dist[idx] > 20): #it is to far, not belone with that guy.
-                #print('dist bigger than 20',np_all_dist[idx])
-                #print('frame shape',frame.shape,'x0.shape',x0.shape)
-                zero_arr = (25,3) 
-                zero_arr=np.zeros(zero_arr)
-                person=zero_arr #if this person disaper , give zero
-              else:
-                person=frame[idx]
-              if ( len(p1)==0 ): #(1,25,3)  first person
-                p1=np.expand_dims(person,axis=0) 
-              else:
-                p1=np.vstack((p1,np.expand_dims(person,axis=0))) #(person++,feature,XY_C) (2,25,3)
-            frame_t=np.expand_dims(p1,axis=0) #(1,6,25,3)
-            np.vstack((x1,frame_t)).shape
-            x1=np.vstack((x1,frame_t))  #(2,6,25,3) (frame++,person,feature,)
-            #[Every Frame END]  
-            #break 
-            print('x1.shape=>',x1.shape)    
-          
-          #all_P_F=[]
-          #break 
-          x=in_feature(x1) #return to draw in the frame       
-          print('finish feature extracted') 
-          #time.sleep(10)
-          person=0
-          frame=datum.cvOutputData
-          for p in x:
-            pX=torch.from_numpy(p).float()  
-            #pX=pX.unsqueeze(1)
-            pX=pX.cuda()
-            out=net(pX)
-            _, pred_label = torch.max(out.data, 1)
-            a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
+        opWrapper.emplaceAndPop([datum]) 
+    
+        x0=in_feature(datum.poseKeypoints) #return to draw in the frame
+        x.append(x0)
+        y.append(yS[index])
+        if(len(x) == 7):
+          if(meter==10):
+            meter=1
+          print('meter=',meter,'person=', person[83:85])
+          meter=meter+1
+          print('x==7 erase')
+          print('y gt=',y)
+          tensor = torch.ones((2,), dtype=torch.float32)
+          X=tensor.new_tensor(x)
+          X=X.unsqueeze(1) # the data formate should be [batch_size,1,30]
+          X=X.cuda()
+          out=net(X)
+          _, pred_label = torch.max(out.data, 1)
+          a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
+          correct=0
+          for i, value in enumerate(pred_label):
+            a[int(value.item())]=a[int(value.item())]+1
+            if(y[i]==value.item()):
+              correct=correct+1
+              result_col.append(1)
+            else:
+              result_col.append(0)
+          result_row.append(result_col)            
+          print ('correct=',correct)
+          #print('predition label=',np.argmax(a))
+          print('predition label=',pred_label)
+          pred=np.argmax(a)
+          result_col=[]
+          x=[]
+          y=[]
 
-            for value in pred_label:
-              a[int(value.item())]=a[int(value.item())]+1
-              #print('predition label=',np.argmax(a))
-              pred=np.argmax(a)
-            #noseX,noseY=x0[person][1][0],x0[person][1][1]
-            #print('neckXY',x0[person][1][0],x0[person][1][1],'pred',pred)
-            multi_pred.append([x0[person][1][0],x0[person][1][1],pred])      
-            person=person+1
-          all_P_F=[]
+        noseX,noseY=datum.poseKeypoints[0][0][0],datum.poseKeypoints[0][0][1]
+        x1,y1,newx,newy=900,400,1000,500
+        start= np.array((float(noseX),float(noseY)))
+        end=np.array((float(noseX)+100,float(noseY)))
+        frame=datum.cvOutputData
+        x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,pred)
+        pt1=(int(x1), int(y1)-150)
+        pt2=(int(newxR),int(newyR)-150)
+        pt3=(int(newxL),int(newyL)-150)
+        triangle_cnt = np.array( [pt1, pt2, pt3] )
+        cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
+        cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
+        cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)
+    #DRAW picture
+    
+    all_test_count=len(result_row)
+    all_data=np.array(result_row) 
+    class_rate=print_class_rate(all_data,all_test_count)
+    Meter_rate=print_meter_rate(all_data)
 
-      frame=datum.cvOutputData
-      #draw multi person    
-      #print('multi_pred',multi_pred)
-      if (collect_frame and len(multi_pred) >0):
-        for rander_person in multi_pred:
-          noseX,noseY,draw_pred=rander_person[0],rander_person[1],rander_person[2]
-          start= np.array((float(noseX),float(noseY)))
-          end=np.array((float(noseX)+100,float(noseY)))
-          x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
-          pt1=(int(x1), int(y1)-150)
-          pt2=(int(newxR),int(newyR)-150)
-          pt3=(int(newxL),int(newyL)-150)
-          triangle_cnt = np.array( [pt1, pt2, pt3] )
-          cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
-          cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
-          cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)
-        collect_frame=0
-        multi_pred=[]
-      cv2.imshow('Frame',frame)
-      # Press Q on keyboard to  exit
-      k = cv2.waitKey(33)#ESC
-      if k==27:    # Esc key to stop
-        break
-    #cap.release()
+    draw_CLASS_statistic(class_rate)
+    draw_METER_statistic(Meter_rate)
 except Exception as e:
     # print(e)
     sys.exit(-1)
+ 
