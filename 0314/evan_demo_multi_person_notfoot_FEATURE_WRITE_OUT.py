@@ -337,6 +337,8 @@ fps=0
 noseX,noseY=0,0
 multi_pred=[]
 collect_frame=0
+old_FPS=0
+retry=0
 #Evan add for write output file
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 CVWriter_handler = cv2.VideoWriter('DEMO1.avi', fourcc, 60, (1920,1080))
@@ -359,6 +361,7 @@ try:
 #    t1 = Thread(target=timer,args=("程式1",1,5,all_P_F))
 #    t1.start()
     FPS_COUNT=0 
+    copy_frame=0
     while(cap.isOpened()):
       # Capture frame-by-frame
       ret, frame = cap.read()
@@ -366,6 +369,7 @@ try:
         #print("FPS_COUNT",FPS_COUNT)
         FPS_COUNT=FPS_COUNT+1
         print("FPS_MAIN COUNT",FPS_COUNT)
+        copy_frame = frame
         imageToProcess = frame
         datum.cvInputData = imageToProcess
         opWrapper.emplaceAndPop([datum])
@@ -441,29 +445,43 @@ try:
       #draw multi person    
       
       print('len of multi_pred',len(multi_pred))
-      #Evan modifiec for every frame      
+      #Evan modifiec for every frame
+      #output_frame=copy_frame #print sekeleton or not
+      output_frame=frame
       for rander_person in multi_pred:
         noseX,noseY,draw_pred=rander_person[0],rander_person[1],rander_person[2]
         start= np.array((float(noseX),float(noseY)-200))
         end=np.array((float(noseX)+100,float(noseY)))
         draw_line,pred_circle=draw_CIRCLE_PREDICTION(start,end,draw_pred)
-        cv2.circle(frame,(int(start[0]),int(start[1])), 50, (0, 255, 0), 1)
+        cv2.circle(output_frame,(int(start[0]),int(start[1])), 50, (255, 255, 255), -1)
         for line in draw_line:
-          cv2.line(frame, line[0], line[1], (0, 255,0 ), 1)
-        cv2.circle(frame, pred_circle, 1, (0,0,255), 4)
-        print("FPS_COUNT",FPS_COUNT)
+          cv2.line(output_frame, line[0], line[1], (0, 0,0 ), 1)
+        #cv2.circle(output_frame, pred_circle, 1, (0,0,255), 4)
+        cv2.arrowedLine(output_frame,(int(start[0]),int(start[1])), pred_circle,(0,0,255),2,tipLength = 0.3)  #circle center -> start 
+        cv2.circle(output_frame,(int(start[0]),int(start[1])), 50,  (0, 0,0 ), 2)
+        print("FPS_COUNT",FPS_COUNT)  #DEBUG  
         #print arrow line prediction
         #x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
         #pt1=(int(x1), int(y1)-150)
         #pt2=(int(newxR),int(newyR)-150)
         #pt3=(int(newxL),int(newyL)-150)
         #triangle_cnt = np.array( [pt1, pt2, pt3] )
-        #cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
-        #cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
-        #cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)     
+        #cv2.drawContours(output_frame, [triangle_cnt], 0, (0,255,0), -1)
+        #cv2.arrowedLine(output_frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
+        #cv2.arrowedLine(output_frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)     
      
-      cv2.imshow('Frame',frame)
-      CVWriter_handler.write(frame)
+      cv2.imshow('Frame',output_frame)
+      CVWriter_handler.write(output_frame)
+      
+      if(old_FPS==FPS_COUNT):
+        retry=retry+1
+      else:
+        retry=0
+   
+      if (retry== 10):
+        break
+      old_FPS=FPS_COUNT
+
       # Press Q on keyboard to  exit
       k = cv2.waitKey(33)#ESC
       if k==27:    # Esc key to stop
