@@ -54,6 +54,37 @@ device = torch.device("cuda")
 def get_dist(start,end):
    return np.linalg.norm(end-start)
 
+def draw_CIRCLE_PREDICTION(start,end,pred):
+  x0=start[0]
+  y0=start[1]
+  r=50
+  pi16=np.linspace(3.14,-3.14,17)
+  draw_line=[]
+  out_pred_point=0
+  for idx in range(0,int((len(pi16)-1)/2)):
+    x1=r*np.cos(pi16[idx])+x0
+    x2=r*np.cos(pi16[idx]-3.14)+x0
+    y1=r*np.sin(pi16[idx])+y0
+    y2=r*np.sin(pi16[idx]-3.14)+y0
+    dot=(int(x1),int(y1))
+    #print('EVAN DEBUG idx',idx,'pred',pred)
+    if pred==0 and idx==4:
+      out_pred_point=dot
+    if pred==1 and idx==3:
+      out_pred_point=dot
+    if pred==2 and idx==2:
+      out_pred_point=dot
+    if pred==3 and idx==1:
+      out_pred_point=dot
+    if pred==4 and idx==5:
+      out_pred_point=dot
+    if pred==5 and idx==6:
+      out_pred_point=dot
+    if pred==6 and idx==7:
+      out_pred_point=dot
+    draw_line.append(((int(x1), int(y1)), (int(x2), int(y2))))
+  return draw_line,out_pred_point
+
 def draw_prediction(start,end,pred):
     fontsize=2
     pred_result=pred
@@ -314,7 +345,7 @@ try:
 
     # Process Image
     datum = op.Datum()
-    #cap = cv2.VideoCapture('/home/evan/mp4_to_png//6MP3_test.avi')
+    #cap = cv2.VideoCapture('/home/evan/512_DISK/DUCK/GOPR0364.MP4')
     #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
     cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0354.MP4')
     #cap = cv2.VideoCapture(sys.argv[1])
@@ -406,6 +437,11 @@ try:
           noseX,noseY,draw_pred=rander_person[0],rander_person[1],rander_person[2]
           start= np.array((float(noseX),float(noseY)))
           end=np.array((float(noseX)+100,float(noseY)))
+          draw_line,pred_circle=draw_CIRCLE_PREDICTION(start,end,draw_pred)
+          cv2.circle(frame,(int(start[0]),int(start[1])), 50, (0, 255, 0), 1)
+          for line in draw_line:
+            cv2.line(frame, line[0], line[1], (0, 255,0 ), 1)
+          cv2.circle(frame, pred_circle, 1, (0,0,255), 4) 
           x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
           pt1=(int(x1), int(y1)-150)
           pt2=(int(newxR),int(newyR)-150)
