@@ -54,9 +54,9 @@ device = torch.device("cuda")
 def get_dist(start,end):
    return np.linalg.norm(end-start)
 
-def draw_CIRCLE_PREDICTION(start_in,end,pred):
-  x0=start_in[0]
-  y0=start_in[1]
+def draw_CIRCLE_PREDICTION(start,end,pred):
+  x0=start[0]
+  y0=start[1]
   r=50
   pi16=np.linspace(3.14,-3.14,17)
   draw_line=[]
@@ -337,6 +337,9 @@ fps=0
 noseX,noseY=0,0
 multi_pred=[]
 collect_frame=0
+#Evan add for write output file
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+CVWriter_handler = cv2.VideoWriter('DEMO1.avi', fourcc, 60, (1920,1080))
 try:
     # Starting OpenPose
     opWrapper = op.WrapperPython()
@@ -354,11 +357,15 @@ try:
     if (cap.isOpened()== False): 
       print("Error opening video stream or file")
 #    t1 = Thread(target=timer,args=("程式1",1,5,all_P_F))
-#    t1.start() 
+#    t1.start()
+    FPS_COUNT=0 
     while(cap.isOpened()):
       # Capture frame-by-frame
       ret, frame = cap.read()
       if ret == True:
+        #print("FPS_COUNT",FPS_COUNT)
+        FPS_COUNT=FPS_COUNT+1
+        print("FPS_MAIN COUNT",FPS_COUNT)
         imageToProcess = frame
         datum.cvInputData = imageToProcess
         opWrapper.emplaceAndPop([datum])
@@ -366,6 +373,7 @@ try:
         all_P_F.append(datum.poseKeypoints)
         #time.sleep(10)
         if ( 5 == len(all_P_F)):
+          multi_pred=[]
           collect_frame=len(all_P_F)
           fps=0
           x0=all_P_F[0]#t-1  , the first frame is t-1
@@ -402,7 +410,7 @@ try:
             x1=np.vstack((x1,frame_t))  #(2,6,25,3) (frame++,person,feature,)
             #[Every Frame END]  
             #break 
-            print('x1.shape=>',x1.shape)    
+            #print('x1.shape=>',x1.shape)    
           
           #all_P_F=[]
           #break 
@@ -431,30 +439,31 @@ try:
 
       frame=datum.cvOutputData
       #draw multi person    
-      #print('multi_pred',multi_pred)
-      if (collect_frame and len(multi_pred) >0):
-        for rander_person in multi_pred:
-          noseX,noseY,draw_pred=rander_person[0],rander_person[1],rander_person[2]
-          start= np.array((float(noseX)+200,float(noseY)))
-          print("EVAN DEBUG START", start)
-          end=np.array((float(noseX)+100,float(noseY)))
-          start_circle= np.array((float(noseX)+200,float(noseY)+200))
-          draw_line,pred_circle=draw_CIRCLE_PREDICTION(start,end,draw_pred)
-          cv2.circle(frame,(int(start[0]),int(start[1])), 50, (0, 255, 0), 1)
-          for line in draw_line:
-            cv2.line(frame, line[0], line[1], (0, 255,0 ), 1)
-          cv2.circle(frame, pred_circle, 1, (0,0,255), 4) 
-          x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
-          pt1=(int(x1), int(y1)-150)
-          pt2=(int(newxR),int(newyR)-150)
-          pt3=(int(newxL),int(newyL)-150)
-          triangle_cnt = np.array( [pt1, pt2, pt3] )
-          cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
-          cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
-          cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)
-        collect_frame=0
-        multi_pred=[]
+      
+      print('len of multi_pred',len(multi_pred))
+      #Evan modifiec for every frame      
+      for rander_person in multi_pred:
+        noseX,noseY,draw_pred=rander_person[0],rander_person[1],rander_person[2]
+        start= np.array((float(noseX),float(noseY)-200))
+        end=np.array((float(noseX)+100,float(noseY)))
+        draw_line,pred_circle=draw_CIRCLE_PREDICTION(start,end,draw_pred)
+        cv2.circle(frame,(int(start[0]),int(start[1])), 50, (0, 255, 0), 1)
+        for line in draw_line:
+          cv2.line(frame, line[0], line[1], (0, 255,0 ), 1)
+        cv2.circle(frame, pred_circle, 1, (0,0,255), 4)
+        print("FPS_COUNT",FPS_COUNT)
+        #print arrow line prediction
+        #x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
+        #pt1=(int(x1), int(y1)-150)
+        #pt2=(int(newxR),int(newyR)-150)
+        #pt3=(int(newxL),int(newyL)-150)
+        #triangle_cnt = np.array( [pt1, pt2, pt3] )
+        #cv2.drawContours(frame, [triangle_cnt], 0, (0,255,0), -1)
+        #cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxL),int(newyL)-150),(0,0,255),2,tipLength = 0.2)
+        #cv2.arrowedLine(frame,(int(x1), int(y1)-150),(int(newxR),int(newyR)-150),(0,0,255),2,tipLength = 0.2)     
+     
       cv2.imshow('Frame',frame)
+      CVWriter_handler.write(frame)
       # Press Q on keyboard to  exit
       k = cv2.waitKey(33)#ESC
       if k==27:    # Esc key to stop
