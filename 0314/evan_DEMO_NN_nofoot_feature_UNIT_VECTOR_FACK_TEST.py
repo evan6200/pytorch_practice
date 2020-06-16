@@ -79,32 +79,42 @@ def in_feature(keypoints):
   count=0
   all_person_count=len(keypoints[0])
   frame_count=len(keypoints)
-  print('TEST',all_person_count)
+  print('all_person_count',all_person_count)
+  print('frame_count',frame_count)
   frame_t=[]
+  frame_t_shoulder=[]
   for i in range(all_person_count):
     p1=[]
+    p1_shoulder=[]
     for j in range(frame_count):
-      print('print frame ','[',j,']','person','[',i,']',i,keypoints[j][i][1][0])
+      print('print frame ','[',j,']','person','[',i,']',i,keypoints[j][i][1][0])  #debug
       a=keypoints[j][i]
-      a=test_extract_featrue(keypoints[j][i])
+      a,shoulder=test_extract_featrue(keypoints[j][i])
       #print('type = a',type(a),np.array(a).shape)
       a=np.array(a)
+      b=np.array(shoulder)
       #print ('Evan print extracted feature',a)
       if ( len(p1)==0 ): #(1,25,3)  first person
         p1=np.expand_dims(a,axis=0)
+        p1_shoulder=np.expand_dims(b,axis=0)
       else:
         p1=np.vstack((p1,np.expand_dims(a,axis=0)))
+        p1_shoulder=np.vstack((p1_shoulder,np.expand_dims(b,axis=0)))
       #print ('p1.shape',p1.shape,p1) 
  
     if ( len(frame_t)==0 ): #(1,25,3)  first person
       frame_t=np.expand_dims(p1,axis=0)
+      frame_t_shoulder=np.expand_dims(p1_shoulder,axis=0)
     else:
       frame_t=np.vstack((frame_t,np.expand_dims(p1,axis=0))) 
-    print('framt_t shape',frame_t.shape)  
-  #print('verify',frame_t[0][0][1][0])
+      frame_t_shoulder=np.vstack((frame_t_shoulder,np.expand_dims(p1_shoulder,axis=0)))
+    print('framt_t shape',frame_t.shape)  #debug
+  print('verify frame_t',frame_t.shape)
+  print('verify frame_t SHOULDER',frame_t_shoulder.shape)
+  print('verify frame_t',frame_t_shoulder)
   #print('verify',frame_t[4][1][1],frame_t[4][3][1][0])
 
-  return frame_t
+  return frame_t , frame_t_shoulder
  
     #center = np.array((float(960),float(540)))
     #min_dist.append(get_dist(nose,center))
@@ -116,7 +126,7 @@ def in_feature(keypoints):
 def test_extract_featrue(a):
     x0,y0,z0=[],[],[]
     X=[]
-    print('a[0][0]',a[0][0])
+    #print('a[0][0]',a[0][0])
     Nose_x=a[0][0];Nose_y=a[0][1];Neck_x=a[1][0];Neck_y=a[1][1];RShoulder_x=a[2][0];
     RShoulder_y=a[2][1];
     LShoulder_x=a[5][0];LShoulder_y=a[5][1];MidHip_x=a[8][0];MidHip_y=a[8][1];RHip_x=a[9][0];
@@ -244,7 +254,7 @@ def test_extract_featrue(a):
     #Evan 0314 end
     #if (lshoulder[0]>rshoulder[0]):
     x0.append(f_people) #Evan 0314 change feature for no foot
-    return x0
+    return x0,a #a=shoulder
 
 
 
