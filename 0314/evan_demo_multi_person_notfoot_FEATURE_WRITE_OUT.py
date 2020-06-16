@@ -329,6 +329,7 @@ for i in range(0, len(args[1])):
 # Construct it from system arguments
 # op.init_argv(args[1])
 # oppython = op.OpenposePython()
+shoulder=[]
 x=[]
 all_P_F=[]
 pred=0
@@ -339,6 +340,13 @@ multi_pred=[]
 collect_frame=0
 old_FPS=0
 retry=0
+
+ans_pred=0
+#         22.5     45   67.5    80  #arcsine
+arcsine=[0.9239,0.7071,0.3827,0.0468]
+
+#font size for display distnace 0615
+fontsize=2
 #Evan add for write output file
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 CVWriter_handler = cv2.VideoWriter('DEMO1.avi', fourcc, 60, (1920,1080))
@@ -351,8 +359,8 @@ try:
     # Process Image
     datum = op.Datum()
     #cap = cv2.VideoCapture('/home/evan/512_DISK/DUCK/GOPR0364.MP4')
-    #cap = cv2.VideoCapture('/home/evan/mp4_to_png/0314_4M_EVAN.avi')
-    cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0354.MP4')
+    #cap = cv2.VideoCapture('/home/evan/mp4_to_png/3M_test.avi')
+    cap = cv2.VideoCapture('/home/evan/512_DISK/0611_for_demo/multi_person/GOPR0355.MP4')
     #cap = cv2.VideoCapture(sys.argv[1])
     #cap = cv2.VideoCapture('avi/3M_test.avi')
     # Check if camera opened successfully
@@ -369,6 +377,8 @@ try:
         #print("FPS_COUNT",FPS_COUNT)
         FPS_COUNT=FPS_COUNT+1
         print("FPS_MAIN COUNT",FPS_COUNT)
+        #if FPS_COUNT ==329:
+        #  time.sleep(100)
         copy_frame = frame
         imageToProcess = frame
         datum.cvInputData = imageToProcess
@@ -418,26 +428,27 @@ try:
           
           #all_P_F=[]
           #break 
-          x=in_feature(x1) #return to draw in the frame       
+          x,shoulder=in_feature(x1) #return to draw in the frame       
           print('finish feature extracted') 
           #time.sleep(10)
           person=0
           frame=datum.cvOutputData
-          for p in x:
+          for p,q_shoulder in zip(x,shoulder):
             pX=torch.from_numpy(p).float()  
             #pX=pX.unsqueeze(1)
             pX=pX.cuda()
             out=net(pX)
             _, pred_label = torch.max(out.data, 1)
             a=torch.tensor(np.array([0, 0, 0,0,0,0,0]))
-
+            avg_shoulder=np.average(q_shoulder)  # 0615 save average shoulder size
             for value in pred_label:
               a[int(value.item())]=a[int(value.item())]+1
               #print('predition label=',np.argmax(a))
-              pred=np.argmax(a)
+              pred=np.argmax(a) 
             #noseX,noseY=x0[person][1][0],x0[person][1][1]
             #print('neckXY',x0[person][1][0],x0[person][1][1],'pred',pred)
-            multi_pred.append([x0[person][1][0],x0[person][1][1],pred])      
+            # 0615 puth average sholder into list            
+            multi_pred.append([x0[person][1][0],x0[person][1][1],pred,avg_shoulder])      
             person=person+1
           all_P_F=[]
 
@@ -459,6 +470,21 @@ try:
         #cv2.circle(output_frame, pred_circle, 1, (0,0,255), 4)
         cv2.arrowedLine(output_frame,(int(start[0]),int(start[1])), pred_circle,(0,0,255),2,tipLength = 0.3)  #circle center -> start 
         cv2.circle(output_frame,(int(start[0]),int(start[1])), 50,  (0, 0,0 ), 2)
+        # 0615 display real distance START
+        if (draw_pred==1 or draw_pred==4):
+          ans_pred=rander_person[3]/arcsine[0] # 22.5
+        if (draw_pred==2 or draw_pred==5):
+          ans_pred=rander_person[3]/arcsine[1] # 45
+        if (draw_pred==3 or draw_pred==6):
+          ans_pred=rander_person[3]/arcsine[2] # 80 67.5
+        if (draw_pred==0):
+          ans_pred=rander_person[3]
+        real_distance=(10.4*35)/ans_pred
+        cv2.putText(output_frame, str('%.2f' % real_distance), (int(start[0]),int(start[1])-100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), fontsize, 1)
+
+        cv2.putText(output_frame, str('%.2f' % rander_person[3]), (int(start[0]),int(start[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), fontsize, 1)
+        # 0616 display real distance END
+
         print("FPS_COUNT",FPS_COUNT)  #DEBUG  
         #print arrow line prediction
         #x1,y1,newxL,newyL,newxR,newyR=draw_prediction(start,end,draw_pred)
